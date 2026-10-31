@@ -231,3 +231,28 @@ def leftover_words(sentence: Sentence) -> str | None:
     if not words:
         return None
     return " ".join(words)
+
+
+# ── comparing texts (used by element_finder) ────────────────────────────────
+
+def simplify(text: str | None) -> str:
+    """Text reduced to what matters for comparing:  "  Save *"  ->  "save",  "Employé:"  ->  "employe"."""
+    if not text:
+        return ""
+    text = fold(text)
+    text = re.sub(r"[^\w]+", " ", text)  # punctuation and symbols -> spaces
+    return " ".join(text.split())
+
+
+def same_text(a: str | None, b: str | None) -> bool:
+    """ "About us" == "about  US" == "About us:". Empty text never matches."""
+    a = simplify(a)
+    return a != "" and a == simplify(b)
+
+
+def contains_words(longer: str | None, words: str | None) -> bool:
+    """ "Employee Information" contains "employee". Whole words only: "Employees" doesn't."""
+    words = simplify(words)
+    if words == "":
+        return False
+    return f" {words} " in f" {simplify(longer)} "

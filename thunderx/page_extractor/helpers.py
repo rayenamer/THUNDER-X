@@ -1,9 +1,11 @@
 """Turn browser-use's DOM tree into a flat list of PageElement. No browser calls here."""
 
+import math
 import re
 
 from browser_use.dom.views import EnhancedDOMTreeNode, NodeType
 
+from thunderx.nl_parser.helpers import same_text
 from thunderx.page_extractor.models import Box, PageElement
 
 # Not part of what the user sees: skip them and everything inside.
@@ -214,3 +216,58 @@ def tidy(text: str | None) -> str | None:
     if not text:
         return None
     return text[:MAX_TEXT]
+
+
+# ── reading a PageElement (used by element_finder) ──────────────────────────
+
+# nl_parser role -> (Chrome roles, HTML tags) that count as that role on the page
+ROLE_MATCHES: dict[str, tuple[set[str], set[str]]] = {
+    "button": ({"button"}, {"button"}),
+    "link": ({"link"}, {"a"}),
+    "dropdown": ({"combobox", "listbox"}, {"select"}),
+    "textbox": ({"textbox", "searchbox"}, {"textarea"}),
+    "checkbox": ({"checkbox"}, set()),
+    "radio": ({"radio"}, set()),
+    "tab": ({"tab"}, set()),
+    "option": ({"option"}, {"option"}),
+    "switch": ({"switch"}, set()),
+    "icon": ({"image", "img"}, {"svg", "i", "img"}),
+    "image": ({"image", "img"}, {"img"}),
+    "label": ({"LabelText"}, {"label"}),
+    "heading": ({"heading"}, {"h1", "h2", "h3", "h4", "h5", "h6"}),
+    "menu": ({"menu", "menubar", "menuitem"}, {"menu"}),
+    "section": ({"region", "group"}, {"section", "fieldset"}),
+    "form": ({"form"}, {"form"}),
+    "dialog": ({"dialog", "alertdialog"}, {"dialog"}),
+    "table": ({"table", "grid"}, {"table"}),
+    "row": ({"row"}, {"tr"}),
+    "nav": ({"navigation"}, {"nav"}),
+    "header": ({"banner"}, {"header"}),
+    "footer": ({"contentinfo"}, {"footer"}),
+}
+
+
+def has_role(element: PageElement, role: str | None) -> bool:
+    """Is the element a "button", a "dropdown"...? An unknown role filters nothing."""
+    if role is None or role not in ROLE_MATCHES:
+        return True
+    chrome_roles, tags = ROLE_MATCHES[role]
+    return element.role in chrome_roles or element.tag in tags
+
+
+def says(element: PageElement, text: str | None) -> bool:
+    """Does the element show this text, as its label or its own text?"""
+    return same_text(element.label, text) or same_text(element.text, text)
+
+
+def distance(a: Box, b: Box) -> float:
+    """Pixels between the centers of two boxes."""
+    a_x, a_y = a.x + a.width / 2, a.y + a.height / 2
+    b_x, b_y = b.x + b.width / 2, b.y + b.height / 2
+    return math.hypot(a_x - b_x, a_y - b_y)
+
+
+def describe(element: PageElement) -> str:
+    """An element as one short line, for the timeline:  <span>ok</span>."""
+    name = element.label or element.text or ""
+    return f"<{element.tag}>{name[:40]}</{element.tag}>"

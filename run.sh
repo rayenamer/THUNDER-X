@@ -6,6 +6,7 @@
 #   ./run.sh parse "<prompt>"     run nl_parser on one instruction
 #   ./run.sh try "<prompt>"       same, but through the running service
 #   ./run.sh extract <url>        list the elements page_extractor sees (file:///... works too)
+#   ./run.sh find <url> "<prompt>" find the element an instruction points at, on that page
 #   ./run.sh setup                (re)create the venv and install deps
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -92,11 +93,56 @@ for e in page.elements:
     print(f"{e.index:>4}  {e.tag:<8} {role:<12} {label:<40}  {where:<40} {flags}")
 ' "$1"
     ;;
+  find)
+    [[ $# -gt 1 ]] || die 'usage: ./run.sh find <url> "<instruction>"'
+    ensure_venv
+    url="$1"; shift
+    say "opening $url in a hidden browser..."
+    exec "$PY" -c '
+import asyncio, sys
+from thunderx.element_finder.services import find
+from thunderx.nl_parser.services import parse
+from thunderx.page_extractor.services import extract_once
+
+url, instruction = sys.argv[1], sys.argv[2]
+
+# 1. nl_parser: the instruction -> action, target, hint
+parsed = parse(instruction)
+
+# 2. page_extractor: the page -> its elements
+page = asyncio.run(extract_once(url))
+
+# 3. element_finder: both outputs -> one element
+result = find(parsed, page.elements)
+
+hint = "-"
+if parsed.hint:
+    hint = " ".join(part for part in [parsed.hint.relation, parsed.hint.text, parsed.hint.role] if part)
+
+print()
+print("1. NL_PARSER")
+print(f"   action={parsed.action} · text={parsed.target.text} · role={parsed.target.role} · ordinal={parsed.target.ordinal} · hint={hint} · value={parsed.value}")
+print("2. PAGE_EXTRACTOR")
+print(f"   {page.title} ({page.url}) · {len(page.elements)} elements")
+print("3. ELEMENT_FINDER")
+for step in result.steps:
+    print(f"   step      {step}")
+print(f"   status    {result.status.upper()}  (route: {result.route})")
+if result.reason:
+    print(f"   reason    {result.reason}")
+if result.element:
+    e = result.element
+    print(f"   element   #{e.index} <{e.tag}> {e.label}   sections={e.sections}")
+    print(f"   xpath     {e.xpath}   (browser-use position xpath, xpath_builder comes next)")
+for e in result.candidates[:10]:
+    print(f"   candidate #{e.index} <{e.tag}> {e.label}   sections={e.sections}")
+' "$url" "$*"
+    ;;
   setup)
     setup
     ;;
   help|-h|--help)
-    banner; sed -n '4,9p' "$0" | sed 's/^#//'
+    banner; sed -n '4,10p' "$0" | sed 's/^#//'
     ;;
   *)
     die "unknown command '$cmd' (try ./run.sh help)"
