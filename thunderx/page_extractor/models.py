@@ -49,7 +49,7 @@ class SessionInfo(BaseModel):
 
 class OpenSessionRequest(BaseModel):
     url: str
-    headless: bool = False  # False: a real window the user can watch
+    headless: bool = True  # hidden browser: the UI shows the page through screenshots
 
 
 class NavigateRequest(BaseModel):

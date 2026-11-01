@@ -1,11 +1,12 @@
 import StatusBadge from "./StatusBadge.jsx";
 
 // One step, opened: its XPath, how it was found, and every part's step (design §5.2).
-export default function NodeDetail({ node, index, busy, onRun, onEdit }) {
+// readOnly: a closed session's step, to look at only.
+export default function NodeDetail({ node, index, busy, readOnly, onRun, onEdit }) {
   if (!node) {
     return (
       <section className="card detail empty">
-        <p className="muted">Add a step, or select one in the chain.</p>
+        <p className="muted">{readOnly ? "Select a step in the chain." : "Add a step, or select one in the chain."}</p>
       </section>
     );
   }
@@ -19,7 +20,12 @@ export default function NodeDetail({ node, index, busy, onRun, onEdit }) {
         <StatusBadge status={node.status} />
       </div>
 
-      <input className="input" value={node.prompt} onChange={(e) => onEdit(node.id, e.target.value)} />
+      <input
+        className="input"
+        value={node.prompt}
+        readOnly={readOnly}
+        onChange={(e) => onEdit(node.id, e.target.value)}
+      />
 
       <dl className="facts">
         <dt>XPath</dt>
@@ -34,6 +40,13 @@ export default function NodeDetail({ node, index, busy, onRun, onEdit }) {
         <dt>Status</dt>
         <dd>{result ? <StatusBadge status={node.status} /> : "—"}</dd>
 
+        {result?.effect && (
+          <>
+            <dt>Effect</dt>
+            <dd>{result.effect}</dd>
+          </>
+        )}
+
         {result?.reason && (
           <>
             <dt>Reason</dt>
@@ -42,9 +55,11 @@ export default function NodeDetail({ node, index, busy, onRun, onEdit }) {
         )}
       </dl>
 
-      <button className="button primary" onClick={() => onRun(node)} disabled={busy || node.status === "running"}>
-        {node.status === "running" ? "Running…" : "Run this step"}
-      </button>
+      {!readOnly && (
+        <button className="button primary" onClick={() => onRun(node)} disabled={busy || node.status === "running"}>
+          {node.status === "running" ? "Running…" : "Run this step"}
+        </button>
+      )}
 
       <h3>Timeline</h3>
       <Timeline steps={result?.steps ?? []} />

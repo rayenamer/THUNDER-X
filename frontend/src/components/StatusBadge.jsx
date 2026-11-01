@@ -2,6 +2,7 @@ const LABELS = {
   waiting: "Waiting",
   running: "Running",
   done: "Verified",
+  unsure: "No change",
   failed: "Failed",
   not_found: "Not found",
 };

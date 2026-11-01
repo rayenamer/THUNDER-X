@@ -1,5 +1,10 @@
-// A small browser: the page as the executor left it after the last run, with the picked element boxed.
-export default function Navigator({ url, result, showHighlight }) {
+import { imageOf } from "../history.js";
+
+// A small browser: the page as a step left it, with the picked element boxed.
+// The result is fresh (POST /run, base64 image) or recorded (LogsDb, image URL): imageOf() reads both.
+export default function Navigator({ url, result }) {
+  const image = imageOf(result);
+
   return (
     <section className="card navigator">
       <div className="browser-bar">
@@ -10,14 +15,10 @@ export default function Navigator({ url, result, showHighlight }) {
       </div>
 
       <div className="browser-page">
-        {result?.screenshot ? (
+        {image ? (
           <div className="screenshot">
-            <img
-              key={result.screenshot.length + (result.xpath ?? "")} /* a new run fades in */
-              src={`data:image/jpeg;base64,${result.screenshot}`}
-              alt="The page after the step"
-            />
-            {showHighlight && result.highlight && (
+            <img key={image.slice(-40)} /* another step's screenshot fades in */ src={image} alt="The page after the step" />
+            {result.highlight && (
               <Highlight key={`${result.xpath}-${result.highlight.x}-${result.highlight.y}`} result={result} />
             )}
           </div>

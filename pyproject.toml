@@ -9,6 +9,7 @@ dependencies = [
     "pydantic>=2.6",
     "browser-use>=0.13,<0.14",
     "httpx>=0.27",
+    "sqlmodel>=0.0.22",  # LogsDb: Pydantic models that are SQLite tables
 ]
 
 [build-system]

@@ -1,34 +1,42 @@
 import { useState } from "react";
 
 export default function OpenPage({ busy, onOpen }) {
+  const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
-  const [showWindow, setShowWindow] = useState(true);
 
   function submit(event) {
     event.preventDefault();
-    if (url.trim()) onOpen(url.trim(), showWindow);
+    if (url.trim()) onOpen(url.trim(), title.trim());
   }
 
   return (
     <div className="hero">
       <form className="card open-card" onSubmit={submit}>
-        <h1>Open a page</h1>
+        <h1>New session</h1>
         <p className="muted">
-          A browser window opens on this page and stays open. Each step you add runs on the page the
+          A browser opens on this page and stays open. Each step you add runs on the page the
           previous step left behind.
         </p>
 
-        <input
-          className="input"
-          placeholder="https://app.example.com"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          autoFocus
-        />
+        <label className="field">
+          <span className="field-label">Title</span>
+          <input
+            className="input"
+            placeholder="Approve an employee (optional: the page's title otherwise)"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            autoFocus
+          />
+        </label>
 
-        <label className="checkbox">
-          <input type="checkbox" checked={showWindow} onChange={(e) => setShowWindow(e.target.checked)} />
-          Show the browser window
+        <label className="field">
+          <span className="field-label">Page</span>
+          <input
+            className="input"
+            placeholder="https://app.example.com"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+          />
         </label>
 
         <button className="button primary" disabled={busy || !url.trim()}>

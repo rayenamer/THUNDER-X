@@ -46,6 +46,7 @@
   --failed: #dc2626;
   --running: var(--primary);
   --waiting: #94a3b8;
+  --unsure: #d97706;
 
   --radius: 8px;
   --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -118,7 +119,8 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: 
   color: var(--muted);
 }
 
-.session-list { display: flex; flex-direction: column; gap: 4px; flex: 1; padding: 0 8px; }
+.session-list { display: flex; flex-direction: column; gap: 4px; flex: 1; padding: 0 8px; overflow-y: auto; }
+.session-list .sidebar-title { padding: 12px 2px 4px; }
 
 .session-item {
   display: flex;
@@ -135,7 +137,15 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: 
 }
 .session-item:hover { background: var(--soft-blue); }
 .session-item.active { background: var(--light-blue); box-shadow: inset 3px 0 0 var(--primary); }
-.session-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.session-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .sidebar-footer {
   display: flex;
@@ -176,7 +186,6 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: 
 }
 .input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--light-blue); }
 
-.checkbox { display: flex; align-items: center; gap: 8px; color: var(--muted); }
 
 .card {
   background: var(--white);
@@ -201,6 +210,7 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: 
 .dot-failed, .dot-not_found { background: var(--failed); }
 .dot-running { background: var(--running); animation: pulse 1s infinite; }
 .dot-waiting { background: var(--waiting); }
+.dot-unsure { background: var(--unsure); }
 
 @keyframes pulse { 50% { opacity: 0.3; } }
 
@@ -222,6 +232,7 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: 
 .badge-failed,
 .badge-not_found { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
 .badge-running   { color: var(--primary); background: var(--light-blue); border-color: #bfd4ff; }
+.badge-unsure    { color: #b45309; background: #fffbeb; border-color: #fde68a; }
 .badge-waiting   { color: var(--muted); background: #f8fafc; border-color: var(--gray); }
 
 /* the step card's edge takes its status colour too */
@@ -229,6 +240,7 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: 
 .node-card.status-failed,
 .node-card.status-not_found { border-left: 3px solid var(--failed); }
 .node-card.status-running   { border-left: 3px solid var(--primary); }
+.node-card.status-unsure    { border-left: 3px solid var(--unsure); }
 
 /* ✔ and ✘ in the timeline */
 .ok   { color: var(--done); font-weight: 700; }
@@ -238,6 +250,8 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: 
 
 .hero { display: flex; justify-content: center; padding-top: 12vh; }
 .open-card { display: flex; flex-direction: column; gap: 14px; width: 480px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field-label { font-size: 12px; font-weight: 600; color: var(--navy); }
 .open-card p { margin: 0; line-height: 1.5; }
 
 /* ── session ───────────────────────────────────────────────────────────── */
@@ -245,9 +259,42 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: 
 .session-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .actions { display: flex; gap: 8px; }
 
-.chain { display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding-bottom: 4px; }
+/* Validate | Act */
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--gray);
+  border-radius: var(--radius);
+  background: var(--white);
+}
+.segmented button {
+  padding: 5px 12px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.segmented button.active { background: var(--light-blue); color: var(--primary); }
+.segmented button:disabled { cursor: default; }
+
+/* The chain is a snake: rows of cards, every second row runs right to left (see NodeChain.jsx).
+   One slot = a 220px card + a 40px arrow = 260px (SLOT_WIDTH in NodeChain.jsx). */
+.chain { display: flex; flex-direction: column; }
+.chain-rows { display: flex; flex-direction: column; } /* its width is set in NodeChain.jsx: the cards that fit */
+.chain-row { display: flex; align-items: stretch; }
+.chain-row.backwards { flex-direction: row-reverse; }
 .chain-item { display: flex; align-items: center; }
-.arrow { padding: 0 10px; color: var(--muted); }
+.chain-row.backwards .chain-item { flex-direction: row-reverse; }
+.arrow { width: 40px; text-align: center; color: var(--muted); flex: none; }
+
+/* The ↓ between two rows, under the row's last card: on the right, then on the left, and so on. */
+.chain-turn { height: 28px; display: flex; align-items: center; color: var(--muted); }
+.chain-turn.right { justify-content: flex-end; padding-right: 104px; }  /* 104 ≈ half a card: under its centre */
+.chain-turn.left { justify-content: flex-start; padding-left: 104px; }
 
 .node-card {
   display: flex;

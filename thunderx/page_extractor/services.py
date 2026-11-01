@@ -27,7 +27,7 @@ class SessionNotFound(KeyError):
 _sessions: dict[str, BrowserSession] = {}
 
 
-async def open_session(url: str, headless: bool = False) -> SessionInfo:
+async def open_session(url: str, headless: bool = True) -> SessionInfo:
     """Open a browser window on `url`. It stays open until close_session()."""
     browser = BrowserSession(headless=headless, keep_alive=True, highlight_elements=False)
     await browser.start()

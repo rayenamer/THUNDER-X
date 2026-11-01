@@ -67,7 +67,7 @@ run_steps() {
   exec "$PY" -c '
 import asyncio, sys
 from thunderx.element_finder.services import find
-from thunderx.executor.services import validate
+from thunderx.executor.services import execute
 from thunderx.laya.services import decide
 from thunderx.nl_parser.services import parse
 from thunderx.page_extractor import services as page_extractor
@@ -124,11 +124,11 @@ async def main(url, instruction, mode):
 
         print("6. EXECUTOR")
         browser = page_extractor.get_browser(session.session_id)
-        result = await validate(built, picked.element, browser)     # 6. executor: takes 5, runs it on the page
+        result = await execute(built, picked.element, browser, "act")  # 6. executor: takes 5, runs it, does the action
         for step in result.steps[len(built.steps):]:
             print(f"   step      {step}")
         print()
-        print(result.model_dump_json(indent=2, include={"action", "xpath", "value", "confidence", "status", "reason"}))
+        print(result.model_dump_json(indent=2, include={"action", "xpath", "value", "confidence", "status", "effect", "reason"}))
     finally:
         await page_extractor.close_session(session.session_id)
 

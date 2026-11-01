@@ -1,45 +1,38 @@
-"""Core logic: run the XPaths on the page (design step 6, validate mode).
+"""Core logic: run the XPath on the page, and in act mode, do the action (design step 6).
 
-Takes xpath_builder's result, tries its XPath then the alternatives, and keeps the first one
-that matches exactly 1 element, the right one (design rule 1: never return an XPath we haven't run).
-Then takes a screenshot of the page, with the element's box, so the user can see what was picked.
+    1. validate    the XPath, then its alternatives: keep the first that matches only our element
+    2. act         click / hover / type / select / check, with browser-use's element actions
+    3. wait        until the page has settled (new page, new tab, single-page app, menu opening)
+    4. check       that the action did what it should (page changed, field holds the text...)
+    5. screenshot  the page as the action left it
 
-"The right one" = the same node in Chrome: we compare Chrome's own node id (backend_node_id,
-recorded by page_extractor) with the node the XPath matched. Positions are not reliable for that:
-scrolling, sticky footers and animations move elements around.
+validate mode stops after 1 (+ 5): it touches nothing, safe on real apps.
 
-Act mode (do the click / hover / type, then check something changed) comes later.
+"Our element" = the same node in Chrome: we compare Chrome's own node id (backend_node_id,
+recorded by page_extractor) with the node the XPath matched. Positions are not reliable for that.
 """
 
 import json
 
 from browser_use import BrowserSession
+from browser_use.browser.events import SwitchTabEvent
 
-from thunderx.executor.models import ExecutionResult, Highlight
+from thunderx.executor import helpers as h
+from thunderx.executor.models import ExecutionResult, Highlight, Mode
 from thunderx.page_extractor.models import PageElement
 from thunderx.xpath_builder.models import XPathResult
 
 OBJECT_GROUP = "thunderx-executor"  # Chrome keeps the nodes we look at under this name, until we release them
 
-# Scrolls the element to the middle of the screen and says where it is drawn (visible-page coordinates).
-SHOW_ELEMENT = """(xpath) => {
-  const node = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-  if (!node) return {};
-  node.scrollIntoView({block: "center", inline: "center"});
-  const box = node.getBoundingClientRect();
-  return {x: box.x, y: box.y, width: box.width, height: box.height,
-          viewport_width: window.innerWidth, viewport_height: window.innerHeight};
-}"""
 
-
-async def validate(built: XPathResult, element: PageElement | None, browser: BrowserSession) -> ExecutionResult:
-    """Run each XPath on the page, best first; keep the first that matches only our element."""
+async def execute(built: XPathResult, element: PageElement | None, browser: BrowserSession, mode: Mode) -> ExecutionResult:
     result = ExecutionResult(
         action=built.action,
         xpath=None,
         value=built.value,
         confidence=built.confidence,
         route=built.route,
+        mode=mode,
         status="not_found",
         steps=list(built.steps),
     )
@@ -53,13 +46,17 @@ async def validate(built: XPathResult, element: PageElement | None, browser: Bro
     if built.xpath is None or element is None:
         result.reason = built.reason or "no XPath to run"
     else:
-        await try_xpaths(result, built, element, browser)
+        await validate(result, built, element, browser)                     # 1
+        if mode == "act" and result.status == "verified":
+            await act_and_check(result, element, browser)                   # 2, 3, 4
 
-    await take_screenshot(result, page, browser)
+    await take_screenshot(result, browser, scroll_to_element=(mode == "validate"))  # 5
     return result
 
 
-async def try_xpaths(result: ExecutionResult, built: XPathResult, element: PageElement, browser: BrowserSession) -> None:
+# ── 1. validate ─────────────────────────────────────────────────────────────
+
+async def validate(result: ExecutionResult, built: XPathResult, element: PageElement, browser: BrowserSession) -> None:
     """The XPath, then its alternatives: the first one that matches only our element wins."""
     tries = [(built.style, built.xpath)]
     for option in built.alternatives:
@@ -97,9 +94,7 @@ async def match_on_page(cdp, xpath: str) -> tuple[int, int | None] | None:
 
     None if the browser couldn't run it (bad XPath, page gone, element in an iframe...).
     """
-    search = (
-        f"document.evaluate({json.dumps(xpath)}, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null)"
-    )
+    search = f"document.evaluate({json.dumps(xpath)}, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null)"
     try:
         counted = await evaluate(cdp, f"{search}.snapshotLength", by_value=True)
         count = counted["result"]["value"]
@@ -135,11 +130,119 @@ async def release_nodes(cdp) -> None:
         pass
 
 
-async def take_screenshot(result: ExecutionResult, page, browser: BrowserSession) -> None:
-    """The visible page, with the element in the middle and its box, when there is one."""
-    if result.xpath is not None:
+# ── 2, 3, 4. act, wait, check ───────────────────────────────────────────────
+
+async def act_and_check(result: ExecutionResult, element: PageElement, browser: BrowserSession) -> None:
+    page = await browser.get_current_page()
+    target = await page.get_element(element.backend_node_id)
+    tabs_before = len(await browser.get_tabs())
+    before = await h.fingerprint(page)
+
+    try:
+        await do_action(result.action, result.value, target)                       # 2
+    except Exception as error:
+        result.status = "failed"
+        result.reason = f"the {result.action} failed: {error}"
+        result.steps.append(f"executor: {result.action} ✘ {error}")
+        return
+    result.steps.append(f"executor: {describe_action(result)} ✔ done")
+
+    if len(await browser.get_tabs()) > tabs_before:                            # a link opened a new tab
+        await browser.event_bus.dispatch(SwitchTabEvent())
+        result.steps.append("executor: a new tab opened, switched to it")
+
+    after = await h.wait_until_settled(browser)                                # 3
+    result.steps.append("executor: page settled")
+
+    effect = await expected_effect(result, target)                             # 4
+    if effect is None:
+        effect = h.what_changed(before, after)
+
+    if effect is None:
+        result.status = "no_change"
+        result.reason = f"the {result.action} was done, but nothing changed on the page"
+        result.steps.append("executor: ✘ nothing changed")
+    else:
+        result.effect = effect
+        result.steps.append(f"executor: ✔ {effect}")
+
+
+async def do_action(action: str | None, value: str | None, target) -> None:
+    """One action on the element, with browser-use's element actions."""
+    if action in (None, "click"):
+        await target.click()
+    elif action == "double_click":
+        await target.click(click_count=2)
+    elif action == "right_click":
+        await target.click(button="right")
+    elif action == "hover":
+        await target.hover()
+    elif action == "type":
+        await target.fill(value or "")
+    elif action == "select":
+        await target.select_option(value or "")
+    elif action == "check":
+        await target.check()
+    elif action == "uncheck":
+        state = await control_state(target)
+        if state and state.get("checked"):
+            await target.click()
+    else:
+        raise ValueError(f"unknown action {action}")
+
+
+async def expected_effect(result: ExecutionResult, target) -> str | None:
+    """For form controls, the effect we expect is the control's own state. None: nothing specific to check."""
+    if result.action not in ("type", "select", "check", "uncheck"):
+        return None
+
+    state = await control_state(target)
+    if state is None:
+        return None  # the element is gone (the page changed): the page fingerprint decides
+
+    if result.action == "type" and state["value"] == (result.value or ""):
+        return f"the field holds \"{result.value}\""
+    if result.action == "select" and result.value and result.value in (state["selected"], state["value"]):
+        return f"\"{result.value}\" is selected"
+    if result.action == "check" and state["checked"] is True:
+        return "it is checked"
+    if result.action == "uncheck" and state["checked"] is False:
+        return "it is unchecked"
+    return None
+
+
+async def control_state(target) -> dict | None:
+    """The live value / checked / selected option of a form control. None if it can't be read."""
+    try:
+        return json.loads(await target.evaluate(h.CONTROL_STATE))
+    except Exception:
+        return None
+
+
+def describe_action(result: ExecutionResult) -> str:
+    """ "click",  "type \"john\"" """
+    if result.value:
+        return f"{result.action} \"{result.value}\""
+    return result.action or "click"
+
+
+# ── 5. screenshot ───────────────────────────────────────────────────────────
+
+async def take_screenshot(result: ExecutionResult, browser: BrowserSession, scroll_to_element: bool) -> None:
+    """The visible page, with the element's box when it's still on screen.
+
+    validate: scroll the element to the middle first. act: don't touch the page any more
+    (scrolling would close a hover menu, and after a click the element may be gone).
+    """
+    page = await browser.get_current_page()
+    if page is None:
+        return
+
+    # After going to another page, the XPath could match a lookalike there: no box.
+    went_elsewhere = (result.effect or "").startswith("went to")
+    if result.xpath is not None and not went_elsewhere:
         try:
-            box = json.loads(await page.evaluate(SHOW_ELEMENT, result.xpath))
+            box = json.loads(await page.evaluate(h.ELEMENT_BOX, result.xpath, scroll_to_element))
             if box:
                 result.highlight = Highlight(**box)
         except Exception:
