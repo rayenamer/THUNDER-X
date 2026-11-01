@@ -22,7 +22,7 @@ LAYA_API_KEY = os.environ.get("LAYA_API_KEY")
 TIMEOUT_SECONDS = 10
 
 # τ (design step 5). Placeholder until it is set from the dev set (design §3.4).
-MIN_CONFIDENCE = 0.5
+MIN_CONFIDENCE = 0.3
 TOP_FOR_LLM = 5
 
 

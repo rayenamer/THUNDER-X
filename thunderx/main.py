@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException
 
 from thunderx import pipeline
 from thunderx.element_finder.api import router as element_finder_router
-from thunderx.element_finder.models import FindResult
+from thunderx.executor.models import ExecutionResult
 from thunderx.nl_parser.api import router as nl_parser_router
 from thunderx.page_extractor import services as page_extractor
 from thunderx.page_extractor.api import router as page_extractor_router
@@ -29,9 +29,9 @@ def health() -> dict:
     return {"status": "ok"}
 
 
-@app.post("/run", response_model=FindResult, tags=["pipeline"])
-async def run(request: pipeline.RunRequest) -> FindResult:
-    """The whole pipeline on the page open in a session: nl_parser + page_extractor -> element_finder -> laya."""
+@app.post("/run", response_model=ExecutionResult, tags=["pipeline"])
+async def run(request: pipeline.RunRequest) -> ExecutionResult:
+    """The whole pipeline on the page open in a session -> {action, xpath, value, confidence, status}."""
     try:
         return await pipeline.run_in_session(request.session_id, request.instruction)
     except page_extractor.SessionNotFound:
