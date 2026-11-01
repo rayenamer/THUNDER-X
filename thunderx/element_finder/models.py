@@ -21,14 +21,14 @@ class Context(BaseModel):
 class FindResult(BaseModel):
     status: Status
     element: PageElement | None = None       # the pick, when found
-    candidates: list[PageElement] = []       # when ambiguous: the elements it couldn't choose between
+    candidates: list[PageElement] = []       # what the next step chooses from (matches, or the context)
     confidence: float = 0.0
-    route: str | None = None                 # which part answered: "direct_matcher"
+    route: str | None = None                 # which part answered: "direct_matcher", "laya"
     reason: str | None = None                # when not found / ambiguous: "2 elements say 'Save', which one?"
     steps: list[str] = []                    # what each part did, in order (the node timeline)
     parsed: ParsedInstruction | None = None  # how the instruction was read
 
 
 class FindRequest(BaseModel):
-    session_id: str   # a window opened with POST /page-extractor/sessions
-    instruction: str  # "Hover over ok under Employee section"
+    parsed: ParsedInstruction    # nl_parser's output
+    elements: list[PageElement]  # page_extractor's output

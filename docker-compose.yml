@@ -1,0 +1,48 @@
+# Thunder-X side services.
+#
+#   docker compose up -d laya     build (first time) and start Laya
+#   docker compose logs -f laya   watch it download the model and start
+#   docker compose stop laya      stop it (the model stays in the volume)
+#   docker compose down -v        remove it and the downloaded model
+#
+# Or through run.sh:  ./run.sh laya up | down | logs | status
+
+services:
+  laya:
+    build: ./docker/laya
+    image: thunderx-laya:local
+    container_name: thunderx-laya
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8001:8000"        # Thunder-X itself uses 8000, so Laya is on 8001
+    environment:
+      LAYA_DEVICE: cpu               # "cuda" with the GPU block below
+      # Laya fine-tuned on Mind2Web (Quantum08/laya-browser-mind2web, 421M, ~850 MB).
+      # It is served under the built-in name "english", the documented way to swap in a fine-tune:
+      # requests send "model": "english" (or no model) and get the fine-tune.
+      LAYA_EXTRA_MODELS: '{"english": "Quantum08/laya-browser-mind2web"}'
+      LAYA_MODELS: english           # load only this one
+      LAYA_DEFAULT_MODEL: english
+      LAYA_PRELOAD: "1"              # load the model at start, not on the first request
+      OMP_NUM_THREADS: "4"
+      HF_HOME: /models
+      # LAYA_API_KEY: change-me      # require "Authorization: Bearer change-me"
+    volumes:
+      - laya-models:/models          # keeps the downloaded weights between restarts
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 180s             # the first start downloads the model
+    # GPU (needs the NVIDIA Container Toolkit, and a CUDA build of torch in the Dockerfile):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+volumes:
+  laya-models:

@@ -8,6 +8,7 @@ dependencies = [
     "uvicorn>=0.29",
     "pydantic>=2.6",
     "browser-use>=0.13,<0.14",
+    "httpx>=0.27",
 ]
 
 [build-system]

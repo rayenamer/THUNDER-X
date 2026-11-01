@@ -67,6 +67,7 @@ def found(element: PageElement) -> FindResult:
     return FindResult(
         status="found",
         element=element,
+        # hard coded confidence LOOL 
         confidence=1.0,
         route="direct_matcher",
         steps=[f"direct matcher: 1 match -> {describe(element)}"],

@@ -41,9 +41,21 @@ def inside_section(hint: Hint, elements: list[PageElement]) -> Context:
                 kept.append(element)
                 break
 
-    if not kept:
-        return Context(elements=[], step="context: nothing kept", reason=f"no section called '{hint.text}' on the page")
-    return Context(elements=kept, step=f"context: {len(elements)} elements -> {len(kept)} inside '{hint.text}'")
+    if kept:
+        return Context(elements=kept, step=f"context: {len(elements)} elements -> {len(kept)} inside '{hint.text}'")
+
+    # No block is titled like that: the hint may name an element, not a section.
+    # "Today under App Store for iPhone": a menu title, with "Today" below it.
+    below = around_anchor(Hint(relation="below", text=hint.text, role=hint.role), elements)
+    if below.elements:
+        below.step = f"context: no section called '{hint.text}', took what is below it instead: {below.step}"
+        return below
+
+    return Context(
+        elements=[],
+        step="context: nothing kept",
+        reason=f"no section called '{hint.text}', and nothing on the page says '{hint.text}'",
+    )
 
 
 def around_anchor(hint: Hint, elements: list[PageElement]) -> Context:
