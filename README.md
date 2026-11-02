@@ -82,4 +82,8 @@ The full story (architecture as it evolved, evaluation, benchmark, vision): **[D
 
 ## License
 
-Not decided yet.
+Copyright 2026 Rayen Ameur.
+
+This project is licensed under the Apache License 2.0. You may use, modify, and distribute this software, including for commercial purposes, subject to the terms of the license.
+
+See the [LICENSE](LICENSE) file for details.
