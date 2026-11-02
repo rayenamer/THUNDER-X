@@ -618,6 +618,49 @@ Not public: how Thunders picks the element on the page at run time.
 | **4 · Any screen** (later) | no element out of reach | a vision model only for what the DOM can't name (canvas, bare icons) · the same rules-first idea on mobile screens | the "not found" cases shrink |
 
 
+## 5.3 Long-term AI roadmap: Thunders as a natural-language compiler
+
+**Today Thunders compiles a sentence into a test.** Thunder-X shows the inside: sentence → element → action → proof on the live page. Tomorrow the same machinery compiles a sentence into **software**: an engineered harness, tested prompts, and a checker that proves every result.
+
+**Why it's a compiler, not a chatbot: abstractions leak.**
+In *The Law of Leaky Abstractions* (2002), Joel Spolsky writes: *"All non-trivial abstractions, to some degree, are leaky."* We build on abstractions, and each one breaks from the inside sooner or later:
+- **TCP** promises reliable delivery on top of IP, which isn't reliable: when packets are lost, TCP resends them, and the "reliable" connection gets slow; when the cable is cut, it can't deliver at all.
+- **SQL** promises "say what you want, not how": yet the same query can be fast or very slow depending on how it's written.
+- **XPath, here:** a selector promises "this element", and a redesign breaks it. Thunder-X doesn't hide that leak: it checks the XPath on the live page every run, and says "not found" or "ambiguous" instead of guessing.
+
+**Natural language is the newest abstraction, and the leakiest:** sentences are ambiguous, models invent. Someone has to own the inside, the way compiler teams own theirs: the harness, the prompts, the tests, the checks. **That's the business.**
+
+**Thunders can be both sides:**
+
+| side | what Thunders does |
+|---|---|
+| **builder** | maintains the natural-language system builder: harness, tested prompts, checkers |
+| **tester** | tests everything that builder makes, with its own platform: the same sentence-level tests |
+
+Each side makes the other stronger: every build is tested, every test failure improves the builder.
+
+> *"It is our job to create computing technologies that nobody has to program, and that the programming language is human: everybody in the world is now a programmer."*
+> Jensen Huang, CEO of NVIDIA, World Governments Summit, Dubai, February 2024
+
+If the programming language is human, it needs what every programming language has: **a compiler**, and **tests**. Thunders already has the tests.
+
+```mermaid
+flowchart LR
+    A["<b>Today</b><br/>tests written<br/>in natural language"] --> B["<b>The new compiler</b><br/>natural language → products<br/>harness · tested prompts · proof on every result<br/><i>Thunder-X is its first pass:<br/>sentence → verified element</i>"]
+    B --> C["<b>Built with it, tested by it</b><br/>Thunders ships its own tools<br/>this way, at full speed"]
+    C --> D["<b>Indie developers</b><br/>describe it,<br/>ship it tested"]
+    D --> E["<b>Everyone</b><br/>teams and companies:<br/>the programming language is human"]
+    classDef today fill:#e7efff,stroke:#005bf0
+    classDef star fill:#005bf0,color:#ffffff,stroke:#1e293b,stroke-width:2px
+    classDef next fill:#f3e8ff,stroke:#7c3aed
+    class A today
+    class B star
+    class C,D,E next
+```.
+
+
+Sources: Joel Spolsky, *The Law of Leaky Abstractions*, Joel on Software, 2002 ([joelonsoftware.com](https://www.joelonsoftware.com/category/reading-lists/page/12/) · [summary](https://lawsofsoftwareengineering.com/laws/law-of-leaky-abstractions/)) · Jensen Huang at the World Governments Summit 2024 ([TechPowerUp](https://techpowerup.com/319135/jensen-huang-believes-that-every-country-needs-sovereign-ai) · [WAM](https://www.wam.ae/en/article/b1mlen4-omar-olama-interviews-founder-nvidia-who-will)).
+
 # 6 . Q&A
 
 ##trade-offs
@@ -637,7 +680,7 @@ Not public: how Thunders picks the element on the page at run time.
 - **Not handled yet:** elements inside iframes or shadow DOM, which an XPath on the page can't reach.
 
 
-one action instructions , not multiple and this is the most important pne
+** one action instructions , not multiple and this is the most important one **
 
 ## Scaling challenges and solutions
 
