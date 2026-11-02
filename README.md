@@ -1,9 +1,13 @@
 <div align="center">
 
 # THUNDER-X 
-**An open-source natural-language-to-XPath engine that doesn't rely on external LLM APIs.**
-**A URL and a sentence in => a verified, actionable XPath out.**
-**No LLM API. No cloud dependency. Just describe what you want**
+
+### An open-source, local-first natural-language-to-XPath engine.
+
+**A URL and a sentence in → a verified, actionable XPath out.**
+
+No external LLM APIs. No cloud dependency. Just describe what you want.
+
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
