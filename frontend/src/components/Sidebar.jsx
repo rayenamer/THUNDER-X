@@ -1,15 +1,15 @@
 import { formatDate } from "./SessionHeader.jsx";
 
 // Every recorded session: the open ones (a live browser window), then the past ones.
-export default function Sidebar({ sessions, activeId, apiOnline, onSelect, onNew }) {
+export default function Sidebar({ sessions, activeId, apiOnline, onSelect, onHome, onNew }) {
   const open = sessions.filter((s) => !s.closed);
   const past = sessions.filter((s) => s.closed);
 
   return (
     <aside className="sidebar">
-      <div className="logo">
+      <button className="logo" onClick={onHome} title="Home">
         thunder<span className="logo-x">x</span>
-      </div>
+      </button>
 
       <button className="button primary full" onClick={onNew}>
         New session

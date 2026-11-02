@@ -26,7 +26,7 @@ Only Thunder-X does it with just the URL and the sentence, and gives back a test
 ## 2. Why it matters for test automation
 
 - **Only a URL and a sentence.** The others need a page already opened and driven by your code, an HTML dump, or a screenshot pipeline.
-- **No LLM on easy steps.** Most actions (e.g., "Click Login") are handled by a lightweight rule-based module in milliseconds. A small local model (Laya, 421M, CPU) is only invoked when the module cannot confidently determine the action.
+- **No LLM on easy steps.** Most actions (e.g., "Click Login") are handled by a lightweight rule-based module in milliseconds. A small local model (laya-browser, 322M, CPU) is only invoked when the module cannot confidently determine the action.
 - **A tested XPath, not a guess.** The XPath is run on the live page before it's returned: exactly one match, and it's the element that was picked.
 - **Stable XPaths.** `//*[@id='username']` survives a redesign; `/html/body/div[2]/form/input[1]` doesn't.
 - **"Not found" is an answer.** A wrong answer becomes a silent bad test; "not found" goes back to the user, who fixes it in seconds.

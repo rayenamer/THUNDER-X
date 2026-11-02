@@ -18,3 +18,8 @@ Why VS Code didn't find it: VS Code doesn't run your environments' Jupyter. It l
 - it looks in usual places: the workspace's root .venv, conda, pyenv, and a few others. labs/.venv is one folder deep, so it may never get scanned;
 - the first environment was labs/.lab, a hidden folder with an unusual name, which it skips;
 - it caches what it found, so a kernel registered after VS Code started often doesn't show up until a reload, and sometimes not even then.
+
+WebChain: A Large-Scale Human-Annotated Dataset of Real-World Web Interaction Traces
+
+
+ It normally also sees the page's URL, title and the first 1,200 characters of text, but laya.decide() only has the candidates, so I send those empty. That may lower its scores a bit.

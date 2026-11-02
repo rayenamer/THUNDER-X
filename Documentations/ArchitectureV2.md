@@ -129,7 +129,19 @@ flowchart LR
     classDef planned stroke-dasharray: 5 5,fill:#d9f2d9,stroke:#2e7d32
 ```
 
-**Where we are:** v7 built, v8 designed (§13).
+### v9 · a Laya that sees the page
+
+```mermaid
+flowchart LR
+    DM[direct matcher] -->|0 or 2+| LB[laya-browser<br/>trained on real-site browsing<br/>shortlist of 60]:::new
+    PE[page_extractor] -->|url · title · first 1200 characters| LB:::new
+    LB -->|sure| XB[xpath_builder]
+    classDef new fill:#d9f2d9,stroke:#2e7d32
+```
+
+The Mind2Web fine-tune is replaced by [cklxx/laya-browser](https://huggingface.co/cklxx/laya-browser), which also reads the page. On the benchmark: precision 74% vs 68%, accuracy 70% vs 67%, coverage 94% vs 98%, slower on the steps that reach Laya.
+
+**Where we are:** v9 built, v8 designed (§13).
 
 ---
 
@@ -141,7 +153,7 @@ flowchart LR
     UI -->|/sessions · /run · /logs| API[Thunder-X service · FastAPI :8000]
     API --> P[pipeline.py<br/>the only place that knows the order]
     P --> CH[(Chrome<br/>browser-use · one per session)]
-    P --> LY[Laya · Docker :8001<br/>Mind2Web fine-tune]
+    P --> LY[laya-browser · Docker :8002<br/>only when the rules can't decide]
     P --> DB[(LogsDb · SQLite<br/>data/logs.db)]
     DB -. dataset .-> EV[Evaluation<br/>CI score · live confidence]:::planned
     EV -. confidence table .-> P
@@ -262,9 +274,9 @@ flowchart TB
     Q -->|no| C{candidates}
     C -->|0| SK[skip]
     C -->|1| ONE[ambiguous: nothing to compare]
-    C -->|2+| SL[shortlist 20<br/>jev_ultrafast lexical ranker]
-    SL --> FMT["options 'label (role, =value)'<br/>question click_target / type_text_target / select_target"]
-    FMT --> L[(Laya :8001<br/>/v1/systemone)]
+    C -->|2+| SL[shortlist 60<br/>lexical ranker]
+    SL --> FMT["options '[1] label (role) = value'<br/>question click_target / type_text_target / select_target<br/>+ the page: url · title · first 1200 characters"]
+    FMT --> L[(laya-browser :8002<br/>/v1/systemone)]
     L --> CF{answer_confidence ≥ τ}
     CF -->|yes| FOUND[found · route laya · runners-up kept]
     CF -->|no| AMB[ambiguous · top 5]
@@ -429,10 +441,54 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    subgraph HOST[./run.sh all]
+    subgraph HOST[./run.sh]
         V[Vite UI :5173] -->|/api proxy| S[FastAPI :8000]
         S --> C[(Chrome · headless)]
         S --> F[(data/logs.db)]
     end
-    S --> D[Docker: Laya :8001<br/>volume laya-models]
+    S --> D[Docker: laya-browser :8002<br/>volume laya-models]
 ```
+
+---
+
+## 15. laya-browser: what it gets
+
+Rules first. Laya runs only when the direct matcher finds 0 or 2+ elements, with the matcher's candidates as options.
+The model is [cklxx/laya-browser](https://huggingface.co/cklxx/laya-browser) (322M, multilingual encoder, trained on real-site browsing), in Docker on :8002, pinned to revision `645cf36`.
+
+```mermaid
+flowchart TB
+    subgraph IN[already in the pipeline]
+        P[parsed instruction<br/>goal + action]
+        C[candidates<br/>from element_finder]
+        S[PageSnapshot<br/>url · title · elements]
+    end
+
+    P --> OP[operation<br/>click → CLICK · type → TYPE_TEXT · select → SELECT]
+    C --> SL[shortlist 60]
+
+    subgraph REQ[build_browser_request: the format it was trained on]
+        PG["state.page<br/>url · title · text = first 1200 characters of the visible text"]
+        OPT["criteria: 1 → '[1] Login' · role · current value"]
+        INS["instructions: goal · operation · its training rules"]
+    end
+
+    S -->|url, title| PG
+    S -->|elements' text, in page order| PG
+    SL --> OPT
+    P --> INS
+    OP --> INS
+    OP --> OPT
+
+    PG --> POST[POST :8002/v1/systemone]
+    OPT --> POST
+    INS --> POST
+    POST --> ANS{confidence ≥ τ}
+    ANS -->|yes| FOUND[found · route laya]
+    ANS -->|no| AMB[ambiguous · top 5]
+```
+
+- **The page text** is built from the elements `page_extractor` already read, one per line, in page order: no extra browser call.
+- **Shortlist of 60:** it was trained on choices up to 60 wide.
+- **τ** (`MIN_CONFIDENCE`) is still a placeholder (0.3), to set from the benchmark (§13.2).
+- `./run.sh` starts it (`docker compose up -d laya-browser`).

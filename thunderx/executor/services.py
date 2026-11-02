@@ -139,13 +139,16 @@ async def act_and_check(result: ExecutionResult, element: PageElement, browser: 
     before = await h.fingerprint(page)
 
     try:
-        await do_action(result.action, result.value, target)                       # 2
+        ignored = await do_action(result.action, result.value, target)             # 2
     except Exception as error:
         result.status = "failed"
         result.reason = f"the {result.action} failed: {error}"
         result.steps.append(f"executor: {result.action} ✘ {error}")
         return
-    result.steps.append(f"executor: {describe_action(result)} ✔ done")
+    if ignored:
+        result.steps.append(f"executor: {describe_action(result)} ✔ {ignored}")
+    else:
+        result.steps.append(f"executor: {describe_action(result)} ✔ done")
 
     if len(await browser.get_tabs()) > tabs_before:                            # a link opened a new tab
         await browser.event_bus.dispatch(SwitchTabEvent())
@@ -157,6 +160,8 @@ async def act_and_check(result: ExecutionResult, element: PageElement, browser: 
     effect = await expected_effect(result, target)                             # 4
     if effect is None:
         effect = h.what_changed(before, after)
+    if effect is None and result.action == "hover":
+        effect = ignored or "the mouse is over it"  # a hover often changes only styles (:hover): nothing to see
 
     if effect is None:
         result.status = "no_change"
@@ -167,8 +172,11 @@ async def act_and_check(result: ExecutionResult, element: PageElement, browser: 
         result.steps.append(f"executor: ✔ {effect}")
 
 
-async def do_action(action: str | None, value: str | None, target) -> None:
-    """One action on the element, with browser-use's element actions."""
+async def do_action(action: str | None, value: str | None, target) -> str | None:
+    """One action on the element, with browser-use's element actions.
+
+    Returns a note when the action was skipped on purpose, else None.
+    """
     if action in (None, "click"):
         await target.click()
     elif action == "double_click":
@@ -176,7 +184,14 @@ async def do_action(action: str | None, value: str | None, target) -> None:
     elif action == "right_click":
         await target.click(button="right")
     elif action == "hover":
-        await target.hover()
+        try:
+            await target.hover()
+        except Exception as error:
+            # The element was found, but has no box of its own (an inline link around a block,
+            # display: contents...): browser-use can't place the mouse. Not a reason to fail the step.
+            if "bounding box" not in str(error):
+                raise
+            return "the element has no box of its own: hover ignored"
     elif action == "type":
         await target.fill(value or "")
     elif action == "select":

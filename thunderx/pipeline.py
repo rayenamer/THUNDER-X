@@ -78,7 +78,7 @@ async def run_in_session(session_id: str, position: int, instruction: str, mode:
     parsed = nl_parser.parse(instruction)
 
     found = element_finder.find(parsed, page.elements)  # rules: context resolver + direct matcher
-    found = await laya.decide(found)                     # only acts if the rules didn't find it
+    found = await laya.decide(found, page)               # only acts if the rules didn't find it
     built = xpath_builder.build(found)                   # writes the XPaths, no browser
 
     browser = page_extractor.get_browser(session_id)

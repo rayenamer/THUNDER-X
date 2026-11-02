@@ -7,7 +7,9 @@ Takes element_finder's result and chooses among its `candidates`:
 Laya's answer is kept only if its confidence reaches MIN_CONFIDENCE. Otherwise the step stays
 "ambiguous", with Laya's top 5 as candidates (for the LLM, later).
 
-The model runs in Docker:  ./run.sh laya up  (http://localhost:8001).
+Two models to choose from, with LAYA_MODEL (run.sh passes it on):
+    browser (default)   cklxx/laya-browser                Docker service "laya-browser", http://localhost:8002
+    mind2web            Quantum08/laya-browser-mind2web   Docker service "laya",         http://localhost:8001
 """
 
 import os
@@ -16,8 +18,12 @@ import httpx
 
 from thunderx.element_finder.models import FindResult
 from thunderx.laya import helpers as h
+from thunderx.page_extractor.models import PageSnapshot
 
-LAYA_URL = os.environ.get("LAYA_URL", "http://localhost:8001")
+LAYA_MODEL = os.environ.get("LAYA_MODEL", "browser")
+LAYA_URLS = {"mind2web": "http://localhost:8001", "browser": "http://localhost:8002"}
+LAYA_URL = os.environ.get("LAYA_URL", LAYA_URLS.get(LAYA_MODEL, LAYA_URLS["mind2web"]))
+SHORTLIST_SIZE = h.BROWSER_SHORTLIST_SIZE if LAYA_MODEL == "browser" else h.SHORTLIST_SIZE
 LAYA_API_KEY = os.environ.get("LAYA_API_KEY")
 TIMEOUT_SECONDS = 10
 
@@ -26,8 +32,12 @@ MIN_CONFIDENCE = 0.3
 TOP_FOR_LLM = 5
 
 
-async def decide(finder_result: FindResult) -> FindResult:
-    """Let Laya choose among element_finder's candidates. Never raises: if Laya is down, the input comes back."""
+async def decide(finder_result: FindResult, page: PageSnapshot | None = None) -> FindResult:
+    """Let Laya choose among element_finder's candidates. Never raises: if Laya is down, the input comes back.
+
+    page: the page the candidates come from. Only cklxx/laya-browser reads it (url, title, first 1200
+    characters of text), because it was trained with it; the Mind2Web Laya wasn't, and doesn't get it.
+    """
     if finder_result.status == "found":
         return finder_result
 
@@ -38,8 +48,8 @@ async def decide(finder_result: FindResult) -> FindResult:
         steps.append("laya: skipped, nothing to choose from")
         return finder_result.model_copy(update={"steps": steps})
 
-    candidates = h.shortlist(parsed.raw, finder_result.candidates)
-    steps.append(f"laya: {len(candidates)} candidates")
+    candidates = h.shortlist(parsed.raw, finder_result.candidates, size=SHORTLIST_SIZE)
+    steps.append(f"laya ({LAYA_MODEL}): {len(candidates)} candidates")
     if len(candidates) == 1:
         # One option is no choice: a softmax over one option always says 1.0
         return finder_result.model_copy(update={
@@ -51,17 +61,13 @@ async def decide(finder_result: FindResult) -> FindResult:
         })
 
     operation = h.operation_of(parsed.action)
-    request = h.build_request(parsed.raw, operation, candidates)
+    request, by_id = h.build_request(parsed.raw, operation, candidates, LAYA_MODEL, page)
     try:
         response = await ask_laya(request)
         answer = response["answers"][h.question_name(operation)]
     except (httpx.HTTPError, KeyError, ValueError) as error:
         steps.append(f"laya: no answer ({type(error).__name__}: {error})")
         return finder_result.model_copy(update={"steps": steps})
-
-    by_id = {}
-    for element in candidates:
-        by_id[h.option_id(element)] = element
 
     choice = answer.get("choice")
     chosen = by_id.get(choice)
@@ -71,7 +77,8 @@ async def decide(finder_result: FindResult) -> FindResult:
 
     probabilities = answer.get("probabilities", {})
     confidence = answer.get("answer_confidence", probabilities.get(choice, 0.0))
-    ranked = sorted(candidates, key=lambda element: -probabilities.get(h.option_id(element), 0.0))
+    best_first = sorted(by_id, key=lambda option: -probabilities.get(option, 0.0))
+    ranked = [by_id[option] for option in best_first]
     steps.append(f"laya: picked {h.render_option(chosen)} · confidence {confidence:.2f}")
 
     if confidence >= MIN_CONFIDENCE:

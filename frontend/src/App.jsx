@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import * as api from "./api.js";
 import { NODE_STATUS, newNode, nodesFromHistory, sessionFromRecord } from "./history.js";
 import Sidebar from "./components/Sidebar.jsx";
+import Home from "./components/Home.jsx";
 import OpenPage from "./components/OpenPage.jsx";
 import SessionHeader from "./components/SessionHeader.jsx";
 import NodeChain from "./components/NodeChain.jsx";
@@ -21,6 +22,7 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [apiOnline, setApiOnline] = useState(false);
+  const [home, setHome] = useState(true); // no session open: the home page, or the "new session" form
 
   const session = sessions.find((s) => s.id === activeId);
   const nodes = session?.nodes ?? [];
@@ -171,6 +173,15 @@ export default function App() {
     }
   }
 
+  // The landing page: on its own, no sidebar. "Start a session" goes into the app.
+  if (home && !session) {
+    return (
+      <div className="landing">
+        <Home onStart={() => setHome(false)} />
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <Sidebar
@@ -178,7 +189,8 @@ export default function App() {
         activeId={activeId}
         apiOnline={apiOnline}
         onSelect={selectSession}
-        onNew={() => setActiveId(null)}
+        onHome={() => { setActiveId(null); setHome(true); }}
+        onNew={() => { setActiveId(null); setHome(false); }}
       />
 
       <main className="main">

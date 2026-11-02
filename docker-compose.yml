@@ -5,7 +5,7 @@
 #   docker compose stop laya      stop it (the model stays in the volume)
 #   docker compose down -v        remove it and the downloaded model
 #
-# Or through run.sh:  ./run.sh laya up | down | logs | status
+# ./run.sh starts the one LAYA_MODEL picks (default: laya-browser).
 
 services:
   laya:
@@ -43,6 +43,30 @@ services:
     #         - driver: nvidia
     #           count: 1
     #           capabilities: [gpu]
+
+  # The other Laya: cklxx/laya-browser (322M, trained on real-site browsing: WebChain, webgym).
+  # Used when LAYA_MODEL=browser (see run.sh). Same /v1/systemone endpoint, its own request format.
+  laya-browser:
+    build: ./docker/laya-browser
+    image: thunderx-laya-browser:local
+    container_name: thunderx-laya-browser
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8002:8000"
+    environment:
+      LAYA_DEVICE: cpu
+      LAYA_BROWSER_REVISION: 645cf366a2ae35f1086e8c20eff48f909bb49206   # the exact version that was read and checked
+      HF_HUB_DISABLE_XET: "1"        # plain HTTPS download: the Xet download stalled here
+      OMP_NUM_THREADS: "4"
+      HF_HOME: /models
+    volumes:
+      - laya-models:/models
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 180s
 
 volumes:
   laya-models:

@@ -36,7 +36,7 @@ A public dataset from Ohio State: over 2,000 tasks done by people on 137 real we
 | | Quantum08 | ShaunSpark | cklxx | abedinia |
 |---|---|---|---|---|
 | Trained on | **Mind2Web only** | Mind2Web, 671 examples | Mind2Web + WebChain + NNetNav | Mind2Web + synthetic |
-| Servable by `laya-serve` | **yes** | no (bare `.bin`) | yes | yes |
+| Servable by `laya-serve` | **yes** | no (bare `.bin`) | its own server (`laya_browser.py serve`) | yes |
 | Element accuracy, Mind2Web test | **0.48–0.50** | not comparable | not comparable | 0.27–0.35 |
 | Published calibration | **yes** | no | no | no |
 
@@ -131,3 +131,18 @@ curl -s localhost:8001/v1/systemone -H 'content-type: application/json' -d '{
 
 
 ---
+
+## 5. The other choice: cklxx/laya-browser
+
+Since the benchmark (precision 74% vs 68%), [cklxx/laya-browser](https://huggingface.co/cklxx/laya-browser) is the **default**; `LAYA_MODEL=mind2web ./run.sh …` switches back to Quantum08 (Docker service `laya-browser`, :8002, pinned to revision `645cf36`).
+
+| | Quantum08 | cklxx (default) |
+|---|---|---|
+| Base | ModernBERT-large, 421M | mmBERT-base (multilingual), 322M |
+| Trained on | Mind2Web only | WebChain real-site trajectories + webgym forms + DAgger |
+| Published scores | Mind2Web test splits (element acc 0.48–0.50) | its own suites only: not comparable |
+| Request format | jev_ultrafast (`helpers.build_mind2web_request`) | its "v5" format (`helpers.build_browser_request`) |
+| Shortlist | 20 | 60 (trained on up to 60 options) |
+
+Which one is better for Thunder-X: run `labs/kpi_lab.ipynb` once with each, and compare the `laya` route.
+
