@@ -656,7 +656,7 @@ flowchart LR
     class A today
     class B star
     class C,D,E next
-```.
+```
 
 
 Sources: Joel Spolsky, *The Law of Leaky Abstractions*, Joel on Software, 2002 ([joelonsoftware.com](https://www.joelonsoftware.com/category/reading-lists/page/12/) · [summary](https://lawsofsoftwareengineering.com/laws/law-of-leaky-abstractions/)) · Jensen Huang at the World Governments Summit 2024 ([TechPowerUp](https://techpowerup.com/319135/jensen-huang-believes-that-every-country-needs-sovereign-ai) · [WAM](https://www.wam.ae/en/article/b1mlen4-omar-olama-interviews-founder-nvidia-who-will)).
