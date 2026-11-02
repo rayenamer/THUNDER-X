@@ -4,6 +4,7 @@
 #   ./labs/lab.sh          create it (first time) or update it, and register the Jupyter kernel "lab"
 #   ./labs/lab.sh open     same, then open the lab in Jupyter Lab (browser), already in this environment
 #   ./labs/lab.sh miniwob  same, but opens the MiniWoB++ lab (confidence_lab_withMiniWoB++.ipynb)
+#   ./labs/lab.sh kpi      same, but opens the KPI lab (kpi_lab.ipynb): start Thunder-X first (./run.sh)
 #   source labs/lab.sh     same as the first, and also activate it in this terminal
 #
 #   In VS Code: Select Kernel → Python Environments → labs/.venv  (or Jupyter Kernel → lab)
@@ -23,6 +24,7 @@ PACKAGES=(
   miniwob        # MiniWoB++ tasks as gymnasium environments (needs Chrome installed)
   pydantic       # Thunder-X's nl_parser, used to filter the tasks
   "browser-use>=0.13,<0.14"   # benchmark builder: opens pages, acts on elements (same version as Thunder-X)
+  httpx          # KPI lab: sends the benchmark rows to Thunder-X's service
 )
 
 lab_setup() {
@@ -51,11 +53,14 @@ elif [[ "${1:-}" == "open" ]]; then
 elif [[ "${1:-}" == "miniwob" ]]; then
   lab_setup || exit 1
   cd "$LAB_DIR" && exec "$LAB_ENV/bin/jupyter" lab "confidence_lab_withMiniWoB++.ipynb"
+elif [[ "${1:-}" == "kpi" ]]; then
+  lab_setup || exit 1
+  cd "$LAB_DIR" && exec "$LAB_ENV/bin/jupyter" lab kpi_lab.ipynb
 elif [[ -n "${1:-}" ]]; then
-  echo "✘ unknown command \"$1\": use  open  or  miniwob  (or nothing, to only set up)"
+  echo "✘ unknown command \"$1\": use  open,  miniwob  or  kpi  (or nothing, to only set up)"
   exit 1
 else
   lab_setup || exit 1
-  echo "  open it: ./labs/lab.sh open   ·   MiniWoB++ lab: ./labs/lab.sh miniwob"
+  echo "  open it: ./labs/lab.sh open   ·   MiniWoB++ lab: ./labs/lab.sh miniwob   ·   KPI lab: ./labs/lab.sh kpi"
   echo "  (or in VS Code: Select Kernel → Python Environments → labs/.venv)"
 fi
