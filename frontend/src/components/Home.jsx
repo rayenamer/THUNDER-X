@@ -57,6 +57,19 @@ const WHY = [
   ["lock", "Private and free", "Nothing is sent to a cloud LLM. No cost per step."],
 ];
 
+// Thunder-X vs a large LLM alone (through its API): what each can do on the job.
+const LLMS = ["Thunder-X", "ChatGPT", "Claude", "Gemini"];
+const LLM_ROWS = [
+  ["Opens the URL itself", "yes", "no", "no", "no"],
+  ["Sees the page after JavaScript ran", "yes", "no: only the HTML you send", "no: only the HTML you send", "no: only the HTML you send"],
+  ["Runs the XPath on the page", "yes: 1 match, the right element", "no: a guess", "no: a guess", "no: a guess"],
+  ["Does the action, checks it worked", "yes, with a screenshot", "no", "no", "no"],
+  ["Says \"not on this page\"", "yes", "may invent one", "may invent one", "may invent one"],
+  ["Same answer every time", "yes", "no", "no", "no"],
+  ["Cost per step", "none", "tokens: the whole page, every step", "tokens: the whole page, every step", "tokens: the whole page, every step"],
+  ["Page leaves the machine", "no", "yes", "yes", "yes"],
+];
+
 const TOOLS = ["Thunder-X", "Stagehand", "browser-use", "MindAct", "Vision models"];
 const TOOL_NOTES = ["", "observe()", "get_element_by_prompt()", "Mind2Web", "UGround / ShowUI"];
 
@@ -221,6 +234,38 @@ function Benchmark() {
           <div className="hx-kpi-hint">average 2.08 s · slowest 7.87 s</div>
           <div className="hx-kpi-hint">CPU only, no API call</div>
         </div>
+      </div>
+
+      <div className="hx-vs-title">And next to ChatGPT, Claude, Gemini? <span className="muted small">(their models through the API, on their own)</span></div>
+      <div className="hx-table-wrap">
+        <table className="hx-table">
+          <thead>
+            <tr>
+              <th />
+              {LLMS.map((name, i) => (
+                <th key={name} className={i === 0 ? "ours" : ""}>{name}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {LLM_ROWS.map(([row, ...cells]) => (
+              <tr key={row}>
+                <th>{row}</th>
+                {cells.map((text, i) => (
+                  <td key={i} className={i === 0 ? "ours" : ""}>
+                    <span className={`hx-cell ${i === 0 ? "hx-cell-good" : "hx-cell-bad"}`}>
+                      {i === 0 ? "✓ " : "✗ "}{text}
+                    </span>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="hx-kpi-hint">
+        A large LLM alone can't run this benchmark: someone has to open the page, send its HTML, and check the answer
+        for it. Thunder-X is that system, without the LLM.
       </div>
     </section>
   );
