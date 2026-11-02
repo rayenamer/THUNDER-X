@@ -4,7 +4,7 @@ Notebook: `labs/confidence_lab_withMiniWoB++.ipynb` · data: `data/MiniWoB++/`
 
 ---
 
-## 1. MiniWoB++ in one minute
+## 1. MiniWoB++ 
 
 MiniWoB++ is a set of **130 tiny web pages**, made to train and test web agents. Each page is a **task**: a 160×210 px box with one instruction on top and some widgets under it.
 
