@@ -1,1 +1,137 @@
+<div align="center">
+
 # THUNDER-X
+
+**A URL and a sentence in, a verified, actionable XPath out.**
+
+![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![browser-use](https://img.shields.io/badge/browser--use-0.13-111111)
+![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+![License](https://img.shields.io/badge/license-TBD-lightgrey)
+
+</div>
+
+---
+
+## Features
+
+- **URL + sentence** — `"Hover over 'ok' under the Employee section"` → the element, its action and value.
+- **Rules first** — parser, context resolver and direct matcher answer most steps with no model at all.
+- **A small model only when needed** — [laya-browser](https://huggingface.co/cklxx/laya-browser) (322M, CPU) decides when the rules find 0 or 2+ elements.
+- **Verified, never guessed** — every XPath is run on the live page: exactly one match, the element that was picked.
+- **Stable XPaths** — id, test id, label, text in section first; position only as a last resort.
+- **Act and prove it** — click, hover, type, select, check; then the effect is checked and a screenshot taken.
+- **Everything logged** — each run, each step, each screenshot, in SQLite.
+
+## How it works
+
+```mermaid
+flowchart LR
+    IN["URL + sentence"] --> NL
+    subgraph SVC["Thunder-X service · :8000"]
+        NL[nl_parser] --> EF[element_finder<br/>rules]
+        EF -->|1 match| XB[xpath_builder]
+        EF -->|0 or 2+| LC[laya client]
+        LC --> XB
+        XB --> EX[executor]
+    end
+    LC <--> LB[laya-browser<br/>Docker :8002]
+    EX <--> CH[(headless Chrome<br/>browser-use)]
+    EX --> OUT["verified XPath<br/>+ action + value"]
+    EX --> DB[(LogsDb<br/>SQLite)]
+```
+
+<details>
+<summary>One step, end to end</summary>
+
+```mermaid
+sequenceDiagram
+    actor T as Tester
+    participant UI as UI :5173
+    participant S as Service :8000
+    participant C as Chrome
+    participant L as laya-browser
+    T->>UI: URL
+    UI->>S: POST /sessions {url}
+    S->>C: open the page (headless)
+    S-->>UI: session_id
+    T->>UI: "Click on Login"
+    UI->>S: POST /run {session_id, instruction, mode}
+    S->>C: read the page
+    S->>S: parse, then rules
+    opt the rules find 0 or 2+ elements
+        S->>L: POST /v1/systemone
+        L-->>S: choice + confidence
+    end
+    S->>C: check the XPath (and act)
+    S-->>UI: xpath, action, value, status, screenshot
+```
+
+</details>
+
+| service | where | role |
+|---|---|---|
+| UI | http://localhost:5173 | sessions, steps, timeline, screenshots |
+| Thunder-X service | http://localhost:8000/docs | the pipeline, behind FastAPI |
+| laya-browser | http://localhost:8002 (Docker) | the decision model, only when the rules can't decide |
+| LogsDb | `data/logs.db` | every session, run, step and screenshot |
+
+## Quick start
+
+**Requires:** Python 3.11+, Node.js + npm, Chrome or Chromium, curl · Docker (optional: without it, no Laya).
+
+```bash
+git clone <this repo> && cd Thunder-X
+./run.sh
+```
+
+The first run creates the Python environment, installs the UI, builds the Laya image and downloads the model (a few minutes). Then open **http://localhost:5173**. `Ctrl+C` stops the service and the UI; Laya keeps running in Docker.
+
+## Usage
+
+```bash
+./run.sh                        # everything, with laya-browser (default)
+LAYA_MODEL=mind2web ./run.sh    # with the Mind2Web Laya instead
+docker compose stop laya-browser
+```
+
+Without the UI:
+
+```bash
+curl -s localhost:8000/sessions -H 'content-type: application/json' \
+     -d '{"url": "https://app.example.com/login"}'
+
+curl -s localhost:8000/run -H 'content-type: application/json' \
+     -d '{"session_id": "<id>", "instruction": "Type jane into the Username field", "mode": "validate"}'
+```
+
+`mode`: `validate` checks the XPath only; `act` also does the action, and the next step runs on the page it leaves.
+
+## Project structure
+
+```text
+thunderx/
+├── nl_parser/        sentence → action · target · value · hint (rules)
+├── page_extractor/   the page as a list of elements (browser-use)
+├── element_finder/   context resolver + direct matcher (rules)
+├── laya/             request to laya-browser, in its training format
+├── xpath_builder/    candidate XPaths, most stable first
+├── executor/         validate · act · check · screenshot
+├── logs_db/          SQLite: sessions, runs, steps, screenshots
+├── pipeline.py       the only place that knows the order
+└── main.py           FastAPI app
+frontend/             React UI (Vite)
+docker/               Laya images
+labs/                 benchmark builder + KPI lab (./labs/lab.sh)
+Documentations/       design, evaluation, vision
+```
+
+## Documentation
+
+The full story (architecture as it evolved, evaluation, benchmark, vision): **[Documentations/summary.md](Documentations/summary.md)**
+
+## License
+
+Not decided yet.

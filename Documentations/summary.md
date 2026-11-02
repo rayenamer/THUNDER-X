@@ -512,9 +512,6 @@ That data is the base for *(potential)*:
 
 ## 5.1 Thunders today, and where Thunder-X fits
 
-Screenshots of Thunders' public pages, taken on 2 Nov 2026, the quoted text outlined in red. After each one: what that feature might need underneath, and what Thunder-X gives.
-
-Most of them rest on the same step, repeated for every line of every test: **this sentence, on this page: which element?** That step is what Thunder-X does.
 
 ### 01 · Tests in plain language
 
@@ -552,16 +549,7 @@ Most of them rest on the same step, repeated for every line of every test: **thi
 - **Thunders might need:** every agent acting on, and pointing at, the right element.
 - **Thunder-X gives:** the same element step for every agent, each answer logged with its route and confidence, so a finding points to one exact element.
 
-### 05 · Recorder
-
-[product](https://www.thunders.ai/product): every click, input and navigation captured in the browser.
-
-![Record tests directly in the browser](assets/thunders/05-recorder.png)
-
-- **Thunders might need:** a recorded click turned into a readable, maintainable step.
-- **Thunder-X gives:** the other direction already exists: the benchmark builder turns an element into a sentence (templates), with its verified XPath.
-
-### 06 · Test Diff
+### 05 · Test Diff
 
 [Thunders Connect 2026](https://www.thunders.ai/articles/thunders-connect-2026-exploring-the-future-of-ai-testing): compares test runs to find regressions and unexpected changes.
 
@@ -570,7 +558,7 @@ Most of them rest on the same step, repeated for every line of every test: **thi
 - **Thunders might need:** the same step, compared from one run to the next.
 - **Thunder-X gives:** every step stored in LogsDb: element, XPath, route, confidence, status, effect, screenshot. Two runs can be compared step by step.
 
-### 07 · Thunders MCP
+### 06 · Thunders MCP
 
 [AI test generation](https://www.thunders.ai/product/features/ai-test-generation): create tests from Claude, ChatGPT, Cursor or any MCP assistant.
 
@@ -579,7 +567,7 @@ Most of them rest on the same step, repeated for every line of every test: **thi
 - **Thunders might need:** the step callable from any assistant or tool.
 - **Thunder-X gives:** one HTTP call, `POST /run` (URL + sentence → XPath): easy to wrap as a tool.
 
-### 08 · Playwright import and export
+### 07 · Playwright import and export
 
 [about](https://www.thunders.ai/about): Playwright import, JavaScript steps, MCP and CI hooks for engineers.
 
@@ -588,7 +576,7 @@ Most of them rest on the same step, repeated for every line of every test: **thi
 - **Thunders might need:** a selector a script can keep.
 - **Thunder-X gives:** an XPath built to last (id, test id, label, text in its section), position only as a last resort.
 
-### 09 · Web, API and mobile
+### 08 · Web, API and mobile
 
 [for QA](https://www.thunders.ai/for-qa): tests across web, API and mobile.
 
@@ -597,7 +585,7 @@ Most of them rest on the same step, repeated for every line of every test: **thi
 - **Thunders might need:** element finding on each platform.
 - **Thunder-X gives:** the web part: any page a browser can open. API and mobile are not covered.
 
-### 10 · Specialized models, thresholds, logs
+### 09 · Specialized models, thresholds, logs
 
 [AI test generation, FAQ](https://www.thunders.ai/product/features/ai-test-generation): "models specialized in software testing rather than general-purpose LLMs", confidence thresholds, traceable logs.
 
@@ -606,61 +594,55 @@ Most of them rest on the same step, repeated for every line of every test: **thi
 - **Thunders might need:** a decision that is cheap, explainable and auditable.
 - **Thunder-X gives:** exactly that design: rules first, a 322M System 1 model only when they can't decide, a τ threshold, every step logged.
 
-### 11 · Incorporated in Paris, November 2024
 
-[about, timeline](https://www.thunders.ai/about).
-
-![incorporated in Paris, November 2024](assets/thunders/11-founded.png)
-
-- **Thunders might need:** a young team: pieces it can own, read and change fast.
-- **Thunder-X gives:** small modules, one per step, open models (Apache-2.0), running on its own machines.
-
-### 12 · €7.8M (≈ $9M) seed, June 2025
+### 11 · €7.8M (≈ $9M) seed, June 2025
 
 [Silicon Canals](https://siliconcanals.com/thunder-code-secures-7-8m).
 
 ![Thunder Code secures €7.8M](assets/thunders/12-seed.png)
 
-- **Thunders might need:** runway spent on product, not on per-step API bills.
+- **Thunders might need:** lets not spend them on tokens
 - **Thunder-X gives:** no LLM call on the steps the rules solve, median 0.69 s per step on CPU.
 
 Not public: how Thunders picks the element on the page at run time.
 
 ## 5.2 What comes next
 
-| when | what | built on |
-|---|---|---|
-| **now** | **live confidence**: set τ per route / category from the benchmark (today: 0.3 placeholder) | `kpi_lab` results |
-| **now** | **CI gate**: run the benchmark on every change, block a drop in precision | `bench.sqlite` + `kpi_lab` |
-| **now** | **bigger benchmark**: real apps, French, hover, duplicates; fix the 2 read-only rows | the benchmark builder |
-| **next** | **self-healing selectors**: when a stored XPath stops matching, run the stored sentence again → new verified XPath; measure how many survive a new page version | the executor's validation + the sentence kept in LogsDb |
-| **next** | **record tests by describing them**: the other direction, a recorded click → its sentence | the builder already writes element → sentence (templates) |
-| **later** | **visual grounding** as a last fallback: canvas, icons with no name in the DOM | a vision model (UGround, ShowUI…), GPU needed |
+**Vision: Thunder-X becomes the layer under every Thunders test that turns a sentence into the right element, proves it, and fixes it when the page changes.**
 
-```mermaid
-journey
-    title Thunder-X roadmap (score = how much is already built, 5 = almost all)
-    section Now · trust the answers
-      Live confidence, τ per group: 4: Thunder-X, QA engineer
-      CI gate on the benchmark: 4: Thunder-X, developer
-      Bigger benchmark, real apps, French: 3: Thunder-X
-    section Next · less maintenance
-      Self-healing selectors: 3: Thunder-X, QA engineer
-      Record tests by describing them: 2: Thunder-X, product team
-    section Later · beyond the DOM
-      Visual grounding fallback: 1: Thunder-X
-```
+| horizon | goal | how | proof |
+|---|---|---|---|
+| **1 · Trust** (now) | every answer can be believed | confidence set from data, not by hand (τ = 0.3 today) · CI gate on the benchmark · real apps and French in the benchmark | a confidence of 0.8 is right 8 times out of 10 · no merge lowers precision |
+| **2 · Zero maintenance** (next) | tests that repair themselves | a broken XPath → re-run the stored sentence, store the new verified one · a recorded click → a readable sentence | % of steps healed alone after a page update |
+| **3 · Learns from use** (next) | it gets better with every customer | every run is already logged: tester feedback → new benchmark rows → fine-tune laya-browser on real Thunders steps | precision rising release after release |
+| **4 · Any screen** (later) | no element out of reach | a vision model only for what the DOM can't name (canvas, bare icons) · the same rules-first idea on mobile screens | the "not found" cases shrink |
 
-## 5.3 The edge, with numbers
 
-- **Precision 74 %** on 178 cases: when it answers, 3 times out of 4 it's right, and every answer was checked on the page.
-- **Median 0.69 s per step, on CPU**, no API cost.
-- **Same sentence + same page → same XPath**: a test suite can rely on it.
-- **Nothing leaves the machine**: no page sent to a cloud LLM.
-- **Stable XPaths first** (id, test id, label, text in section), position last.
+# 6 . Q&A
 
-Sources: [thunders.ai/product](https://www.thunders.ai/product) · [thunders.ai/about](https://www.thunders.ai/about) · [AI test generation](https://www.thunders.ai/product/features/ai-test-generation) · [for QA](https://www.thunders.ai/for-qa) · [Thunders Connect 2026](https://www.thunders.ai/articles/thunders-connect-2026-exploring-the-future-of-ai-testing) · [Silicon Canals: €7.8M seed](https://siliconcanals.com/thunder-code-secures-7-8m) · [Frenchweb](https://www.frenchweb.fr/thunder-code-leve-78-millions-deuros-pour-automatiser-la-qa-logicielle-avec-des-agents-ia/455197)
+##trade-offs
 
-# 6 . Q&A (rest of the time)
+- **Rules before AI:** fast, free and repeatable, but they miss synonyms and vague wording, so those go to laya-browser.
+- **Precision before coverage:** we prefer "not found" to a wrong answer, so coverage is 94 % and precision 74 %.
+- **laya-browser over the Mind2Web Laya:** +6 points of precision, but steps that reach Laya take longer (average 2.08 s vs 0.78 s).
+- **A small model on CPU, no LLM:** no API cost and no data sent out, but it can't reason like a large LLM on hard sentences.
+- **Stable XPaths first:** id, label, text in section survive a redesign; the position XPath always works but is the first to break, so it comes last.
 
-Have backup slides ready on trade-offs, edge cases and scaling.
+## edge cases 
+
+- **Two elements with the same text:** "under X" / "next to X" narrows them down; otherwise laya-browser picks; otherwise the step says it's ambiguous.
+- **A wrong XPath (0 or 2+ matches, or another element):** the executor tries the next one; none left → `failed`, never a guess.
+- **An element with no box of its own on hover:** the hover is skipped and the step says so.
+- **laya-browser down or too slow (10 s):** the step continues with the rules' result and says why.
+- **Not handled yet:** elements inside iframes or shadow DOM, which an XPath on the page can't reach.
+
+
+one action instructions , not multiple and this is the most important pne
+
+## Scaling challenges and solutions
+
+- **One browser per session:** each one costs memory, so sessions run on a pool of workers with a limit per machine.
+- **laya-browser on CPU:** one container is the bottleneck, so run several behind a load balancer, or a GPU (22–27 ms per decision per its model card).
+- **Steps the rules answer never reach Laya:** only the ambiguous ones add model load (the per-route split in `kpi_lab` says how many).
+- **LogsDb is one SQLite file with screenshots:** move it to Postgres, with screenshots in object storage.
+- **More customers, more pages:** UI!
