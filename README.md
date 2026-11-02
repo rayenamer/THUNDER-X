@@ -9,6 +9,7 @@
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
 ![browser-use](https://img.shields.io/badge/browser--use-0.13-111111)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+[![Laya](https://img.shields.io/badge/Laya-System%201%20model%20%C2%B7%20laya--browser%20322M-FFD21E?logo=huggingface&logoColor=black)](https://huggingface.co/cklxx/laya-browser)
 ![License](https://img.shields.io/badge/license-TBD-lightgrey)
 
 </div>
@@ -25,62 +26,9 @@
 - **Act and prove it** — click, hover, type, select, check; then the effect is checked and a screenshot taken.
 - **Everything logged** — each run, each step, each screenshot, in SQLite.
 
-## How it works
-
-```mermaid
-flowchart LR
-    IN["URL + sentence"] --> NL
-    subgraph SVC["Thunder-X service · :8000"]
-        NL[nl_parser] --> EF[element_finder<br/>rules]
-        EF -->|1 match| XB[xpath_builder]
-        EF -->|0 or 2+| LC[laya client]
-        LC --> XB
-        XB --> EX[executor]
-    end
-    LC <--> LB[laya-browser<br/>Docker :8002]
-    EX <--> CH[(headless Chrome<br/>browser-use)]
-    EX --> OUT["verified XPath<br/>+ action + value"]
-    EX --> DB[(LogsDb<br/>SQLite)]
-```
-
-<details>
-<summary>One step, end to end</summary>
-
-```mermaid
-sequenceDiagram
-    actor T as Tester
-    participant UI as UI :5173
-    participant S as Service :8000
-    participant C as Chrome
-    participant L as laya-browser
-    T->>UI: URL
-    UI->>S: POST /sessions {url}
-    S->>C: open the page (headless)
-    S-->>UI: session_id
-    T->>UI: "Click on Login"
-    UI->>S: POST /run {session_id, instruction, mode}
-    S->>C: read the page
-    S->>S: parse, then rules
-    opt the rules find 0 or 2+ elements
-        S->>L: POST /v1/systemone
-        L-->>S: choice + confidence
-    end
-    S->>C: check the XPath (and act)
-    S-->>UI: xpath, action, value, status, screenshot
-```
-
-</details>
-
-| service | where | role |
-|---|---|---|
-| UI | http://localhost:5173 | sessions, steps, timeline, screenshots |
-| Thunder-X service | http://localhost:8000/docs | the pipeline, behind FastAPI |
-| laya-browser | http://localhost:8002 (Docker) | the decision model, only when the rules can't decide |
-| LogsDb | `data/logs.db` | every session, run, step and screenshot |
-
 ## Quick start
 
-**Requires:** Python 3.11+, Node.js + npm, Chrome or Chromium, curl · Docker (optional: without it, no Laya).
+**Requires:** Python 3.11+, Node.js + npm, Chrome or Chromium, curl · Docker ( without it, no Laya).
 
 ```bash
 git clone <this repo> && cd Thunder-X
