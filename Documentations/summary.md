@@ -274,6 +274,15 @@ flowchart LR
 - **One headless browser window per session**, kept open: each step runs on the page the previous one left behind.
 - **Two SQLite files:** LogsDb records every run; the benchmark holds the test cases. `kpi_lab` sends the benchmark rows to the service like any client.
 
+### System design, in short
+
+| deliverable | answer |
+|---|---|
+| **Data flow diagrams** | discussed above |
+| **Model architecture choices** | Rules first. laya-browser (322M, CPU) only when they can't decide. No other. |
+| **Infrastructure requirements** | One machine: the FastAPI service, headless Chrome, laya-browser in Docker, SQLite. |
+| **Integration with Thunders** | Two endpoints, a session then its steps:<br/>`POST /sessions {url}` → `{session_id}`: opens the page in a browser window that stays open.<br/>`POST /run {session_id, position, instruction, mode}` → `{action, xpath, value, confidence, status, effect, screenshot}`: one step, run on the page the previous step left.<br/>`DELETE /sessions/{session_id}` closes the window. |
+
 # 3 . Evaluation framework
 
 Two ways to measure: **online**, every run explains itself; **offline**, a benchmark with known answers.
